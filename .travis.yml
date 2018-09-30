@@ -1,0 +1,9 @@
+language: nix
+
+install:
+    - nix-shell --run "echo 'nix-shell'"
+
+script:
+    - nix-shell --run "cargo-web test --target=wasm32-unknown-unknown --nodejs"
+    - nix-shell --run "cargo-web build --target=wasm32-unknown-unknown"
+    - nix-shell --run "cargo-web deploy --target=wasm32-unknown-unknown"

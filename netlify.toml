@@ -1,0 +1,11 @@
+[Settings]
+ID = "da4a7eb3-54db-46a1-990b-37eba94767d3"
+
+[build]
+publish = "target/deploy"
+command = "./scripts/netlify.sh"
+
+[[redirects]]
+from = "/*"
+to = "/index.html"
+status = 200

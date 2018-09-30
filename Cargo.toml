@@ -1,0 +1,12 @@
+[package]
+name = "search"
+version = "0.1.0"
+authors = ["LightDiscord <root@arnaud.sh>"]
+edition = "2018"
+description = "Let's search something!"
+repository = "https://github.com/LightDiscord/Search"
+license = "MIT"
+
+[dependencies]
+stdweb = "0.4.9"
+yew = { git = "https://github.com/DenisKolodin/yew.git" }
