@@ -1,20 +1,22 @@
 #[macro_use]
 extern crate yew;
+
+#[macro_use]
 extern crate stdweb;
 
-use stdweb::web::Date;
+pub mod components;
+
 use yew::prelude::*;
 use yew::services::ConsoleService;
 
+use self::components::input::Model as SearchInput;
+
 pub struct Model {
     console: ConsoleService,
-    value: i64,
 }
 
 pub enum Msg {
-    Increment,
-    Decrement,
-    Bulk(Vec<Msg>),
+    Search(String),
 }
 
 impl Component for Model {
@@ -24,24 +26,20 @@ impl Component for Model {
     fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
         Model {
             console: ConsoleService::new(),
-            value: 0,
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Increment => {
-                self.value = self.value + 1;
-                self.console.log("plus one");
+            Msg::Search(search) => {
+                self.console.log(&format!("New search! {}", search));
+
+                let url = format!("https://google.com/search?q={}", search);
+
+                js! {
+                    window.open(@{url}, "_self");
+                }
             }
-            Msg::Decrement => {
-                self.value = self.value - 1;
-                self.console.log("minus one");
-            }
-            Msg::Bulk(list) => for msg in list {
-                self.update(msg);
-                self.console.log("Bulk action");
-            },
         }
         true
     }
@@ -52,16 +50,11 @@ impl Renderable<Model> for Model {
         html! {
             <section class="section",>
                 <div class="container",>
-                    <h1 class="title",>{ "Counter" }</h1>
+                    <h1 class="title",>{ "Search" }</h1>
 
-                    <div class="buttons",>
-                        <button class="button", onclick=|_| Msg::Increment,>{ "Increment" }</button>
-                        <button class="button", onclick=|_| Msg::Decrement,>{ "Decrement" }</button>
-                        <button class="button", onclick=|_| Msg::Bulk(vec![Msg::Increment, Msg::Increment]),>{ "Increment Twice" }</button>
+                    <div>
+                        <SearchInput: onsearch=|search| Msg::Search(search), />
                     </div>
-
-                    <p>{ self.value }</p>
-                    <p>{ Date::new().to_string() }</p>
                 </div>
             </section>
         }
