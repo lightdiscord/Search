@@ -50,15 +50,20 @@ impl Component for Model {
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         html! {
-            <div>
-                <nav class="menu",>
-                    <button onclick=|_| Msg::Increment,>{ "Increment" }</button>
-                    <button onclick=|_| Msg::Decrement,>{ "Decrement" }</button>
-                    <button onclick=|_| Msg::Bulk(vec![Msg::Increment, Msg::Increment]),>{ "Increment Twice" }</button>
-                </nav>
-                <p>{ self.value }</p>
-                <p>{ Date::new().to_string() }</p>
-            </div>
+            <section class="section",>
+                <div class="container",>
+                    <h1 class="title",>{ "Counter" }</h1>
+
+                    <div class="buttons",>
+                        <button class="button", onclick=|_| Msg::Increment,>{ "Increment" }</button>
+                        <button class="button", onclick=|_| Msg::Decrement,>{ "Decrement" }</button>
+                        <button class="button", onclick=|_| Msg::Bulk(vec![Msg::Increment, Msg::Increment]),>{ "Increment Twice" }</button>
+                    </div>
+
+                    <p>{ self.value }</p>
+                    <p>{ Date::new().to_string() }</p>
+                </div>
+            </section>
         }
     }
 }
