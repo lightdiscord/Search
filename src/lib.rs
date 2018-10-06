@@ -3,12 +3,16 @@ extern crate yew;
 
 #[macro_use]
 extern crate stdweb;
+extern crate rand;
 
 pub mod components;
 pub mod engines;
 
 use yew::prelude::*;
 use yew::services::ConsoleService;
+
+use rand::thread_rng;
+use rand::seq::SliceRandom;
 
 use self::components::input::Model as SearchInput;
 use self::components::engine::Model as EngineButton;
@@ -17,7 +21,8 @@ use self::engines::Engine;
 
 pub struct Model {
     console: ConsoleService,
-    current: Engine,
+    engines: Vec<Engine>,
+    current: Option<Engine>,
 }
 
 pub enum Msg {
@@ -30,29 +35,34 @@ impl Component for Model {
     type Properties = ();
 
     fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
+        let mut engines = engines::list::ENGINES.to_vec();
+        engines.shuffle(&mut thread_rng());
+
         Model {
             console: ConsoleService::new(),
-            current: engines::list::GOOGLE
+            current: engines.first().map(ToOwned::to_owned),
+            engines
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Search(search) => {
+            Msg::Search(search) => if let Some(engine) = &self.current {
                 self.console.log(&format!("New search! {}", search));
 
-                let url = self.current.schema.replace("%s", &search);
+                let url = engine.schema.replace("%s", &search);
 
                 js! {
                     window.open(@{url}, "_self");
                 }
             },
             Msg::NewEngine(engine) => {
+                let engine = Some(engine);
                 if self.current == engine {
                     return false;
                 }
 
-                self.console.log(&format!("New engine! {}", engine.name));
+                self.console.log(&format!("New engine! {}", engine.as_ref().unwrap().name));
                 self.current = engine;
             }
         }
@@ -62,8 +72,14 @@ impl Component for Model {
 
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
-        let show = |x| html! {
-            <EngineButton: engine=x, active=x==&self.current, onchoose=|engine| Msg::NewEngine(engine), />
+        let format_engine = |engine| {
+            let active = self.current.as_ref()
+                .map(|current| current == engine)
+                .unwrap_or(false);
+
+            html! {
+                <EngineButton: engine=engine, active=active, onchoose=|engine| Msg::NewEngine(engine), />
+            }
         };
 
         html! {
@@ -76,7 +92,7 @@ impl Renderable<Model> for Model {
                     </div>
 
                     <div class="buttons",>
-                        { for engines::list::ENGINES.iter().map(show) }
+                        { for self.engines.iter().map(format_engine) }
                     </div>
                 </div>
             </section>

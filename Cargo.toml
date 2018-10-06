@@ -9,4 +9,10 @@ license = "MIT"
 
 [dependencies]
 stdweb = "0.4.9"
-yew = { git = "https://github.com/DenisKolodin/yew.git" }
+
+[dependencies.yew]
+git = "https://github.com/DenisKolodin/yew.git"
+
+[dependencies.rand]
+git = "https://github.com/rust-lang-nursery/rand"
+features = ["stdweb"]

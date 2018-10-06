@@ -14,7 +14,7 @@ impl Default for Engine {
 }
 
 macro_rules! engines {
-    ( $( $id:ident => ($name:expr, $schema:expr) ),* ) => {
+    ( $( $id:ident($name:expr, $schema:expr) ),* ) => {
         use super::Engine;
 
         $(
