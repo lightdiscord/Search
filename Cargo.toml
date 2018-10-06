@@ -16,3 +16,8 @@ git = "https://github.com/DenisKolodin/yew.git"
 [dependencies.rand]
 git = "https://github.com/rust-lang-nursery/rand"
 features = ["stdweb"]
+
+[profile.release]
+lto = true
+debug = false
+opt-level = 'z'
