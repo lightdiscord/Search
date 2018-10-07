@@ -1,7 +1,9 @@
-#[derive(Debug, Clone, PartialEq, Eq)]
+use std::borrow::Cow;
+
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Engine {
-    pub name: &'static str,
-    pub schema: &'static str
+    pub name: String,
+    pub schema: String
 }
 
 impl Default for Engine {
@@ -17,14 +19,28 @@ macro_rules! engines {
     ( $( $id:ident($name:expr, $schema:expr) ),* ) => {
         use super::Engine;
 
-        $(
-            pub const $id: Engine = Engine {
-                name: $name,
-                schema: $schema,
-            };
-        )*
+        pub enum Engines {
+            $($id),*
+        }
 
-        pub const ENGINES: &'static [Engine] = &[$($id),*];
+        impl Into<Engine> for Engines {
+            fn into(self) -> Engine {
+                match self {
+                    $(
+                        Engines::$id => Engine {
+                            name: $name.into(),
+                            schema: $schema.into()
+                        }
+                    ),*
+                }
+            }
+        }
+
+        impl Engines {
+            pub fn to_vec() -> Vec<Engine> {
+                vec![$(Engines::$id.into()),*]
+            }
+        }
     };
 }
 

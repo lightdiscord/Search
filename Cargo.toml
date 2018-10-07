@@ -9,6 +9,8 @@ license = "MIT"
 
 [dependencies]
 stdweb = "0.4.9"
+serde = "1"
+serde_derive = "1"
 
 [dependencies.yew]
 git = "https://github.com/DenisKolodin/yew.git"
