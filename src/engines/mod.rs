@@ -1,14 +1,11 @@
-use std::borrow::Cow;
-
-#[derive(Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Engine {
+pub struct EngineStructure {
     pub name: String,
-    pub schema: String
+    pub schema: String,
 }
 
-impl Default for Engine {
+impl Default for EngineStructure {
     fn default() -> Self {
-        Engine {
+        Self {
             name: "".into(),
             schema: "".into(),
         }
@@ -17,31 +14,40 @@ impl Default for Engine {
 
 macro_rules! engines {
     ( $( $id:ident($name:expr, $schema:expr) ),* ) => {
-        use super::Engine;
+        use rand::thread_rng;
+        use rand::seq::SliceRandom;
 
-        pub enum Engines {
+        use super::EngineStructure;
+
+        #[derive(Serialize, Deserialize, PartialEq, Eq, Clone)]
+        pub enum Engine {
             $($id),*
         }
 
-        impl Into<Engine> for Engines {
-            fn into(self) -> Engine {
-                match self {
+        impl Engine {
+            pub fn to_vec() -> Vec<Engine> {
+                vec![$(Engine::$id),*]
+            }
+
+            pub fn metas(&self) -> EngineStructure {
+                match *self {
                     $(
-                        Engines::$id => Engine {
+                        Engine::$id => EngineStructure {
                             name: $name.into(),
-                            schema: $schema.into()
+                            schema: $schema.into(),
                         }
                     ),*
                 }
             }
         }
 
-        impl Engines {
-            pub fn to_vec() -> Vec<Engine> {
-                vec![$(Engines::$id.into()),*]
+        impl Default for Engine {
+            fn default() -> Self {
+                Engine::to_vec().choose(&mut thread_rng()).unwrap().to_owned()
             }
         }
     };
 }
 
-pub mod list;
+mod engines;
+pub use self::engines::Engine;

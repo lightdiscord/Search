@@ -5,54 +5,68 @@ pub struct Model {
     text: String,
 }
 
-pub enum Msg {
+pub enum Message {
     Search,
     GotInput(String),
     Clear,
-    Nope,
+    Keypress(KeyPressEvent),
+}
+
+impl Default for Model {
+    fn default() -> Self {
+        Self {
+            onsearch: None,
+            text: "".into()
+        }
+    }
 }
 
 #[derive(PartialEq, Clone)]
-pub struct Props {
+pub struct Properties {
     pub onsearch: Option<Callback<String>>,
 }
 
-impl Default for Props {
+impl Default for Properties {
     fn default() -> Self {
-        Props {
+        Self {
             onsearch: None,
         }
     }
 }
 
 impl Component for Model {
-    type Message = Msg;
-    type Properties = Props;
+    type Message = Message;
+    type Properties = Properties;
 
     fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self {
-        Model {
+        Self {
             onsearch: props.onsearch,
-            text: "".into()
+            ..Default::default()
         }
     }
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Search => {
+            Message::Search => {
                 if let Some(ref mut callback) = self.onsearch {
                     callback.emit(self.text.clone());
                 }
                 false
             },
-            Msg::Clear => {
-                self.update(Msg::GotInput("".into()))
+            Message::Clear => {
+                self.update(Message::GotInput("".into()))
             },
-            Msg::GotInput(value) => {
+            Message::GotInput(value) => {
                 self.text = value;
                 true
             },
-            Msg::Nope => false,
-
+            Message::Keypress(event) => {
+                if event.key() == "Enter" {
+                    self.update(Message::Search)
+                } else {
+                    false
+                }
+            }
         }
     }
 
@@ -68,10 +82,8 @@ impl Renderable<Model> for Model {
             <input class="input is-medium",
                 type="text",
                 value=&self.text,
-                onkeypress=|e| {
-                    if e.key() == "Enter" { Msg::Search } else { Msg::Nope }
-                },
-                oninput=|e| Msg::GotInput(e.value),>
+                onkeypress=|e| Message::Keypress(e),
+                oninput=|e| Message::GotInput(e.value),>
             </input>
         }
     }

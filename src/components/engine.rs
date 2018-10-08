@@ -1,71 +1,78 @@
 use yew::prelude::*;
-use super::super::engines::Engine;
+
+use super::super::{ engines, utils };
+use self::engines::Engine;
+use self::utils::Conditional;
 
 pub struct Model {
     engine: Engine,
-    onchoose: Option<Callback<Engine>>,
-    onfavorite: Option<Callback<Engine>>,
+    onclick: Option<Callback<Engine>>,
+    ondoubleclick: Option<Callback<Engine>>,
     active: bool,
 }
 
-pub enum Msg {
-    Choose,
-    Favorite,
+pub enum Message {
+    Click,
+    DoubleClick,
 }
 
 #[derive(PartialEq, Clone)]
-pub struct Props {
-    pub onchoose: Option<Callback<Engine>>,
-    pub onfavorite: Option<Callback<Engine>>,
+pub struct Properties {
+    pub onclick: Option<Callback<Engine>>,
+    pub ondoubleclick: Option<Callback<Engine>>,
     pub engine: Engine,
     pub active: bool,
 }
 
-impl<'a> Default for Props {
+impl Default for Properties {
     fn default() -> Self {
-        Props {
-            onchoose: None,
-            onfavorite: None,
+        Self {
+            onclick: None,
+            ondoubleclick: None,
             engine: Engine::default(),
             active: false,
         }
     }
 }
 
-impl Component for Model {
-    type Message = Msg;
-    type Properties = Props;
-
-    fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self {
+impl Into<Model> for Properties {
+    fn into(self) -> Model {
         Model {
-            onchoose: props.onchoose,
-            onfavorite: props.onfavorite,
-            engine: props.engine,
-            active: props.active
+            onclick: self.onclick,
+            ondoubleclick: self.ondoubleclick,
+            engine: self.engine,
+            active: self.active
         }
     }
+}
 
-    fn update(&mut self, msg: Self::Message) -> ShouldRender {
-        match msg {
-            Msg::Choose => {
-                if let Some(ref mut callback) = self.onchoose {
-                    callback.emit(self.engine.clone());
-                }
-            },
-            Msg::Favorite => {
-                if let Some(ref mut callback) = self.onfavorite {
-                    callback.emit(self.engine.clone());
-                }
-            }
+impl Component for Model {
+    type Message = Message;
+    type Properties = Properties;
+
+    fn create(props: Self::Properties, _: ComponentLink<Self>) -> Self {
+        props.into()
+    }
+
+    fn update(&mut self, message: Self::Message) -> ShouldRender {
+        let action = match message {
+            Message::Click => &mut self.onclick,
+            Message::DoubleClick => &mut self.ondoubleclick,
+        };
+
+        if let Some(ref mut callback) = action {
+            callback.emit(self.engine.clone());
         }
+
         false
     }
 
     fn change(&mut self, props: Self::Properties) -> ShouldRender {
-        self.onchoose = props.onchoose;
-        self.onfavorite = props.onfavorite;
+        self.onclick = props.onclick;
+        self.ondoubleclick = props.ondoubleclick;
         self.active = props.active;
         self.engine = props.engine;
+
         true
     }
 }
@@ -73,17 +80,14 @@ impl Component for Model {
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
         let mut classes = vec!["button"];
-
-        if self.active {
-            classes.push("is-active");
-        }
+        classes.conditional_push("is-active", self.active);
+        let classes = classes.join(" ");
 
         html! {
-            <button
-                class=classes.join(" "),
-                onclick=|_| Msg::Choose,
-                ondoubleclick=|_| Msg::Favorite,>
-                { &self.engine.name }
+            <button class=classes,
+                onclick=|_| Message::Click,
+                ondoubleclick=|_| Message::DoubleClick,>
+                { self.engine.metas().name }
             </button>
         }
     }

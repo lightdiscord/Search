@@ -1,31 +1,23 @@
-#[macro_use]
-extern crate yew;
-
-#[macro_use]
-extern crate stdweb;
-
-#[macro_use]
-extern crate serde_derive;
+#[macro_use] extern crate yew;
+#[macro_use] extern crate stdweb;
+#[macro_use] extern crate serde_derive;
 extern crate serde;
 extern crate rand;
 
+pub mod utils;
 pub mod components;
 pub mod engines;
+pub mod state;
 
 use yew::prelude::*;
 use yew::services::{ ConsoleService, StorageService };
-use yew::services::storage::Area;
-use yew::format::Json;
 
 use rand::thread_rng;
 use rand::seq::SliceRandom;
 
-use self::components::input::Model as SearchInput;
-use self::components::engine::Model as EngineButton;
-
+use self::components::{ EngineButton, SearchInput };
 use self::engines::Engine;
-
-const KEY: &'static str = "search.state";
+use self::state::State;
 
 pub struct Model {
     console: ConsoleService,
@@ -35,41 +27,23 @@ pub struct Model {
     state: State
 }
 
-pub enum Msg {
+pub enum Message {
     Search(String),
-    NewEngine(Engine),
-    NewDefault(Engine)
-}
-
-#[derive(Serialize, Deserialize)]
-pub struct State {
-    default_engine: Option<Engine>,
-}
-
-impl Default for State {
-    fn default() -> Self {
-        State {
-            default_engine: None
-        }
-    }
+    ChooseEvent(Engine),
+    DefaultEvent(Engine),
+    StoreState
 }
 
 impl Component for Model {
-    type Message = Msg;
+    type Message = Message;
     type Properties = ();
 
     fn create(_: Self::Properties, _: ComponentLink<Self>) -> Self {
-        let mut engines = engines::list::Engines::to_vec();
+        let mut engines = engines::Engine::to_vec();
         engines.shuffle(&mut thread_rng());
 
-        let mut storage = StorageService::new(Area::Local);
+        let (storage, state) = State::retrieve();
 
-        if let Json(Ok(state)) = storage.restore(KEY) {
-            let state: State = state;
-        }
-
-        let Json(state) = storage.restore(KEY);
-        let state: State = state.unwrap_or_else(|_| State::default());
         let current = state.default_engine.as_ref().or(engines.first())
             .map(ToOwned::to_owned);
 
@@ -84,66 +58,111 @@ impl Component for Model {
 
     fn update(&mut self, msg: Self::Message) -> ShouldRender {
         match msg {
-            Msg::Search(search) => if let Some(engine) = &self.current {
-                self.console.log(&format!("New search! {}", search));
+            Message::Search(search) => if let Some(engine) = &self.current {
+                self.console.info("New search!");
+                self.console.debug(&search);
 
-                let url = engine.schema.replace("%s", &search);
+                let url = engine.metas().schema.replace("%s", &search);
 
                 js! {
                     window.open(@{url}, "_self");
                 }
             },
-            Msg::NewEngine(engine) => {
+            Message::ChooseEvent(engine) => {
                 let engine = Some(engine);
                 if self.current == engine {
                     return false;
                 }
 
-                self.console.log(&format!("New engine! {}", engine.as_ref().unwrap().name));
+                self.console.info("New engine");
+                self.console.debug(&engine.as_ref().unwrap().metas().name);
+
                 self.current = engine;
             },
-            Msg::NewDefault(engine) => {
+            Message::DefaultEvent(engine) => {
                 let engine = Some(engine);
+
                 if self.state.default_engine == engine {
-                    return false;
+                    self.console.info("Remove default engine.");
+
+                    self.state.default_engine = None;
+                } else {
+                    self.console.info("New default engine");
+                    self.console.debug(&engine.as_ref().unwrap().metas().name);
+
+                    self.state.default_engine = engine;
                 }
 
-                self.console.log(&format!("New default! {}", engine.as_ref().unwrap().name));
-                self.state.default_engine = engine;
-                self.storage.store(KEY, Json(&self.state));
+                self.update(Message::StoreState);
+            },
+            Message::StoreState => {
+                self.state.save(&mut self.storage);
+
+                return false;
             }
         }
+
         true
+    }
+}
+
+struct SearchBar;
+
+impl Renderable<Model> for SearchBar {
+    fn view(&self) -> Html<Model> {
+        html! {
+            <div class="field",>
+                <label class="label",>{ "Search" }</label>
+                <div class="control",>
+                    <SearchInput: onsearch=|search| Message::Search(search), />
+                </div>
+                <p class="help",>{ "Press enter to search" }</p>
+            </div>
+        }
     }
 }
 
 impl Renderable<Model> for Model {
     fn view(&self) -> Html<Self> {
-        let format_engine = |engine| {
+        let format_engine = |engine: &Engine| {
             let active = self.current.as_ref()
                 .map(|current| current == engine)
                 .unwrap_or(false);
 
             html! {
-                <EngineButton: engine=engine,
-                    active=active,
-                    onchoose=|engine| Msg::NewEngine(engine),
-                    onfavorite=|engine| Msg::NewDefault(engine), />
+                <div class="control",>
+                    <EngineButton: engine=engine,
+                        active=active,
+                        onclick=|engine| Message::ChooseEvent(engine),
+                        ondoubleclick=|engine| Message::DefaultEvent(engine), />
+                </div>
             }
         };
 
         html! {
             <section class="section",>
                 <div class="container",>
-                    <h1 class="title",>{ "Search" }</h1>
+                    <h1 class="title is-3",>{ "Search" }</h1>
 
-                    <div>
-                        <SearchInput: onsearch=|search| Msg::Search(search), />
-                    </div>
+                    { SearchBar.view() }
 
-                    <div class="buttons",>
+                    <div class="field is-grouped is-grouped-multiline",>
                         { for self.engines.iter().map(format_engine) }
                     </div>
+
+                    <h2 class="title is-4",>{ "Introduction" }</h2>
+                    <p>
+                        { "A random list is generated from a list of known search \
+                          engines. You can double click on one of them to make it your \
+                          default engine." }
+                    </p>
+                    <p>
+                        { "This application was developped by " }
+                        <a href="https://arnaud.sh",>{ "LightDiscord" }</a>
+                        { " and it's also on " }
+                        <a href="https://github.com/lightdiscord/search",>{ "GitHub" }</a>
+                        { "." }
+                    </p>
                 </div>
             </section>
         }
